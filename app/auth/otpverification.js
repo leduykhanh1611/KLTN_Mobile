@@ -45,10 +45,17 @@ export default function OtpVerificationScreen() {
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
-        <Image
-          source={require('@/assets/images/logo.png')}
-          style={styles.reactLogo}
-        />
+        <View style={styles.headerContainer}>
+          <View
+            style={[
+              styles.profileImageContainer,
+              { borderColor: rankColors[customerData.customer.customer_rank_id.rank_name] || '#CD7F32' },
+            ]}
+          >
+            <TabBarIcon name="person" color="#fff" size={40} />
+          </View>
+          <Text style={styles.nameText}>{customerData.customer.name}</Text>
+        </View>
       }>
       <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
         <View style={{ flex: 1, justifyContent: 'center', padding: 20 }}>
@@ -96,4 +103,5 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     marginTop: 20,
   },
+  
 });
