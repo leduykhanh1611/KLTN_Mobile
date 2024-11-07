@@ -276,7 +276,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
       </ThemedView>
-      {/* <Button onPress={getToken}>Get token</Button> */}
+      <Button onPress={getToken}>Get token</Button>
     </ParallaxScrollView>
   );
 }

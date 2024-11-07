@@ -179,7 +179,10 @@ export default function CustomerProfile() {
       ]
     );
   };
-
+  const handleLogout = async () => {
+    await AsyncStorage.clear();
+    router.replace('/auth/login');
+  };
   if (loading || !customerData) {
     return (
       <View style={styles.centered}>
@@ -306,7 +309,9 @@ export default function CustomerProfile() {
           </TouchableOpacity>
         </ScrollView>
       </ThemedView>
-      
+      <Button mode="contained" onPress={() => handleLogout()} style={styles.logout}>
+        Đăng xuất
+      </Button>
       {/* Add or Update Vehicle Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <KeyboardAvoidingView

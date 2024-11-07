@@ -33,6 +33,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="AppointmentListScreen"
+        options={{
+          title: 'Lịch hẹn',
+          tabBarIcon: ({ color, focused }) => (
+            <TabBarIcon name={focused ? 'speedometer' : 'speedometer-outline'} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="CustomerProfile"
         options={{
           title: 'Trang cá nhân',
