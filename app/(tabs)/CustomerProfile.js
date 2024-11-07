@@ -7,6 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { ThemedView } from '@/components/ThemedView';
 import { Picker } from '@react-native-picker/picker';
+import { router } from 'expo-router';
 
 export default function CustomerProfile() {
   const [customerData, setCustomerData] = useState(null);
@@ -16,7 +17,6 @@ export default function CustomerProfile() {
   const [editingCustomer, setEditingCustomer] = useState(false);
   const [selectedVehicleId, setSelectedVehicleId] = useState(null);
   const [isUpdating, setIsUpdating] = useState(false);
-  const { width, height } = Dimensions.get('window');
   const [newVehicle, setNewVehicle] = useState({
     vehicle_type_id: '',
     license_plate: '',
@@ -39,13 +39,13 @@ export default function CustomerProfile() {
         method: 'GET',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!response.ok) throw new Error('Failed to fetch customer data');
+      if (!response.ok) throw new Error('Lỗi lấy thông tin khách hàng');
       const data = await response.json();
       await AsyncStorage.setItem('idCus', data.customer._id);
       setCustomerData(data);
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to load customer data');
+      Alert.alert('Lỗi', 'Lỗi lấy thông tin khách hàng');
     } finally {
       setLoading(false);
     }
@@ -99,15 +99,15 @@ export default function CustomerProfile() {
       });
 
       if (response.ok) {
-        Alert.alert('Success', isUpdating ? 'Vehicle updated successfully' : 'Vehicle added successfully');
+        Alert.alert('Thành công', isUpdating ? 'Cập nhật thông tin xe thành công' : 'Thêm xe mới thành công');
         setModalVisible(false);
         fetchCustomerData(); // Refresh to include the new or updated vehicle
       } else {
-        throw new Error(isUpdating ? 'Failed to update vehicle' : 'Failed to add vehicle');
+        throw new Error(isUpdating ? 'Lỗi khi cập nhật thông tin xe' : 'Lỗi khi thêm xe mới');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', isUpdating ? 'Failed to update vehicle' : 'Failed to add vehicle');
+      Alert.alert('Lỗi', isUpdating ? 'Lỗi cập nhật thông tin xe' : 'Lỗi khi thêm xe mới');
     }
   };
 
@@ -158,14 +158,14 @@ export default function CustomerProfile() {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.ok) {
-        Alert.alert('Success', 'Vehicle deleted successfully');
+        Alert.alert('Thành công', 'Xóa xe thành công');
         fetchCustomerData(); // Refresh list after deletion
       } else {
-        throw new Error('Failed to delete vehicle');
+        throw new Error('Xóa xe thất bại');
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Failed to delete vehicle');
+      Alert.alert('Lỗi', 'Lỗi xóa xe');
     }
   };
   // xác nhận xóa xe
@@ -283,6 +283,8 @@ export default function CustomerProfile() {
                 <Text style={styles.vehicleName}>Loại xe: {vehicle.vehicle_type_id?.vehicle_type_name}</Text>
                 <Text style={styles.vehicleDescription}>Biển số: {vehicle.license_plate}</Text>
                 <Text style={styles.vehicleDescription}>Màu xe: {vehicle.color}</Text>
+                <Text style={styles.vehicleDescription}>Hãng xe: {vehicle.manufacturer}</Text>
+                <Text style={styles.vehicleDescription}>Năm sản xuất: {vehicle.year}</Text>
               </View>
 
               {/* Buttons Container */}
@@ -304,7 +306,7 @@ export default function CustomerProfile() {
           </TouchableOpacity>
         </ScrollView>
       </ThemedView>
-
+      
       {/* Add or Update Vehicle Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
         <KeyboardAvoidingView
@@ -362,6 +364,7 @@ export default function CustomerProfile() {
           </ScrollView>
         </KeyboardAvoidingView>
       </Modal>
+
     </ParallaxScrollView>
   );
 }
@@ -449,6 +452,7 @@ const styles = StyleSheet.create({
     width: 200,
     flexDirection: 'row', // Horizontal layout for main card
     alignItems: 'center',
+    flex: 1,
   },
   actionButtonContainer: {
     flexDirection: 'column', // Stack buttons vertically
@@ -456,6 +460,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingLeft: 20,
     left: 20,
+    bottom: 85,
+    flex: 0.5,
   },
   vehicleInfoContainer: {
     flex: 1,
@@ -513,5 +519,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 8,
     width: '100%',
+  },
+  logout: {
+    marginTop: 20,
+    backgroundColor: '#FF6347',
   },
 });

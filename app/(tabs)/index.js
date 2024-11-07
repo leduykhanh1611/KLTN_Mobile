@@ -12,7 +12,16 @@ export default function HomeScreen() {
   const [customerData, setCustomerData] = useState(null);
   const [serviceData, setServiceData] = useState(null);
   const [vehicleTypeData, setVehicleTypeData] = useState(null);
+  const [priceData, setPriceData] = useState(null);
+  const [promotionData, setPromotionData] = useState(null);
   const [loading, setLoading] = useState(true);
+  // Function to calculate remaining days until end_date
+  const calculateRemainingDays = (endDate) => {
+    const currentDate = new Date();
+    const end = new Date(endDate);
+    const timeDiff = end - currentDate;
+    return Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Convert milliseconds to days
+  };
   const getToken = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -107,21 +116,76 @@ export default function HomeScreen() {
       Alert.alert('Lỗi', 'Đã xảy ra lỗi khi tải thông tin loại xe');
     }
   };
+  const fetchPriceData = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await fetch('https://host-rose-sigma.vercel.app/api/prices/filterprice/', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error Response:', errorText);
+        Alert.alert('Lỗi', 'Không thể tải thông tin giá tham khảo');
+        return;
+      }
+
+      const data = await response.json();
+      setPriceData(data);
+    } catch (error) {
+      console.error('Fetch Error:', error);
+      Alert.alert('Lỗi', 'Đã xảy ra lỗi khi tải thông tin giá tham khảo');
+    }
+  };
+  // Fetch promotions from API
+  const fetchPromotionData = async () => {
+    const token = await AsyncStorage.getItem('token');
+    try {
+      const response = await fetch('https://host-rose-sigma.vercel.app/api/promotions/mobile/getAll/lines', {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error Response:', errorText);
+        Alert.alert('Lỗi', 'Không thể tải thông tin khuyến mãi');
+        return;
+      }
+
+      const data = await response.json();
+      setPromotionData(data);
+    } catch (error) {
+      console.error('Fetch Error:', error);
+      Alert.alert('Lỗi', 'Đã xảy ra lỗi khi tải thông tin khuyến mãi');
+    }
+  };
   useEffect(() => {
 
     fetchCustomerData(); // Gọi lần đầu tiên ngay lập tức
     fetchAllService();
     fetchAllVehicleTypes();
+    fetchPriceData();
+    fetchPromotionData();
     const intervalId = setInterval(() => {
       fetchCustomerData();
       fetchAllService();
       fetchAllVehicleTypes();
+      fetchPriceData();
+      fetchPromotionData();
     }, 15000);
 
     // Dọn dẹp interval khi component bị hủy
     return () => clearInterval(intervalId);
   }, []);
-
+  const formatPrice = (price) => {
+    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
 
 
   if (loading) {
@@ -146,6 +210,26 @@ export default function HomeScreen() {
           </View>
         </View>
       }>
+      {/* Promotions Section */}
+      <ThemedView style={styles.titleContainer}>
+        <View style={styles.service}>
+          <TabBarIcon name="gift" color="#FF6347" size={24} style={styles.iconSpacing} />
+          <ThemedText type="subtitle" style={styles.titleText}>Chương trình khuyến mãi</ThemedText>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.promotionScroll}>
+          {promotionData && promotionData.map((promotion) => {
+            const remainingDays = calculateRemainingDays(promotion.end_date);
+            return (
+              <View key={promotion._id} style={styles.promotionCard}>
+                <Text style={styles.promotionDescription}>{promotion.description}</Text>
+                <View style={styles.remainingDaysBadge}>
+                  <Text style={styles.remainingDaysText}>Còn {remainingDays} ngày </Text>
+                </View>
+              </View>
+            );
+          })}
+        </ScrollView>
+      </ThemedView>
       <ThemedView style={styles.titleContainer}>
         <View style={styles.service}>
           <TabBarIcon name="briefcase" color="#4CAF50" size={24} style={styles.iconSpacing} />
@@ -176,8 +260,23 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
       </ThemedView>
-
-      <Button onPress={getToken}>Get token</Button>
+      <ThemedView style={styles.titleContainer}>
+        <View style={styles.service}>
+          <TabBarIcon name="pricetags" color="#FFA500" size={24} style={styles.iconSpacing} />
+          <ThemedText type="subtitle" style={styles.titleText}>Giá tham khảo</ThemedText>
+        </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.priceScroll}>
+          {priceData && priceData.map((price) => (
+            <View key={price.priceline_id} style={styles.priceCard}>
+              <Text style={styles.serviceName}>Dịch vụ: {price.service}</Text>
+              <Text style={styles.vehicleType}>Loại xe: {price.vehicle_type}</Text>
+              <Text style={styles.priceAmount}>Giá: {formatPrice(price.price)} VND</Text>
+              <Text style={styles.serviceTime}>Thời gian: {price.time_required} phút</Text>
+            </View>
+          ))}
+        </ScrollView>
+      </ThemedView>
+      {/* <Button onPress={getToken}>Get token</Button> */}
     </ParallaxScrollView>
   );
 }
@@ -295,5 +394,55 @@ const styles = StyleSheet.create({
   titleText: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  priceScroll: {
+    paddingVertical: 20,
+    paddingHorizontal: 5,
+  },
+  priceCard: {
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    padding: 15,
+    marginRight: 10,
+    width: 200,
+  },
+  vehicleType: {
+    fontSize: 14,
+    color: '#333',
+    marginTop: 5,
+  },
+  priceAmount: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 5,
+  },
+  promotionScroll: {
+    paddingVertical: 20,
+    paddingHorizontal: 5,
+  },
+  promotionCard: {
+    backgroundColor: '#e0f7fa',
+    borderRadius: 8,
+    padding: 15,
+    marginRight: 10,
+    width: 200,
+    alignItems: 'center',
+  },
+  promotionDescription: {
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  remainingDaysBadge: {
+    backgroundColor: '#FF6347',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  remainingDaysText: {
+    fontSize: 12,
+    color: '#fff',
   },
 });
