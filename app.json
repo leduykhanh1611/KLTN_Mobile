@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "KLTN_Mobile",
-    "slug": "KLTN_Mobile",
+    "slug": "landktech",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -31,6 +31,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "5419f15e-f7d0-4a7f-acd4-984e0ac3244e"
+      }
+    },
+    "owner": "leduykhanh1611"
   }
 }
