@@ -8,13 +8,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from 'react-native-paper';
 import { useEffect, useState } from 'react';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
+import { Picker } from '@react-native-picker/picker';
+
 export default function HomeScreen() {
   const [customerData, setCustomerData] = useState(null);
   const [serviceData, setServiceData] = useState(null);
   const [vehicleTypeData, setVehicleTypeData] = useState(null);
-  const [priceData, setPriceData] = useState(null);
+  const [priceData, setPriceData] = useState([]); // Initialize as an empty array
+  const [filteredData, setFilteredData] = useState([]);
   const [promotionData, setPromotionData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [vehicleTypeFilter, setVehicleTypeFilter] = useState('');
+  const [serviceFilter, setServiceFilter] = useState('');
+
+
   // Function to calculate remaining days until end_date
   const calculateRemainingDays = (endDate) => {
     const currentDate = new Date();
@@ -125,18 +132,10 @@ export default function HomeScreen() {
           Authorization: `Bearer ${token}`,
         },
       });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error Response:', errorText);
-        Alert.alert('Lỗi', 'Không thể tải thông tin giá tham khảo');
-        return;
-      }
-
       const data = await response.json();
-      setPriceData(data);
+      setPriceData(data || []); // Ensure data is an array
+      setFilteredData(data || []); // Initially show all data
     } catch (error) {
-      console.error('Fetch Error:', error);
       Alert.alert('Lỗi', 'Đã xảy ra lỗi khi tải thông tin giá tham khảo');
     }
   };
@@ -165,8 +164,21 @@ export default function HomeScreen() {
       Alert.alert('Lỗi', 'Đã xảy ra lỗi khi tải thông tin khuyến mãi');
     }
   };
-  useEffect(() => {
+  const filterData = () => {
+    if (priceData && priceData.length > 0) { // Check if priceData has data
+      const filtered = priceData.filter(item =>
+        (vehicleTypeFilter ? item.vehicle_type === vehicleTypeFilter : true) &&
+        (serviceFilter ? item.service === serviceFilter : true)
+      );
+      setFilteredData(filtered);
+    }
+  };
 
+  useEffect(() => {
+    filterData();
+  }, [vehicleTypeFilter, serviceFilter]);
+
+  useEffect(() => {
     fetchCustomerData(); // Gọi lần đầu tiên ngay lập tức
     fetchAllService();
     fetchAllVehicleTypes();
@@ -176,7 +188,6 @@ export default function HomeScreen() {
       fetchCustomerData();
       fetchAllService();
       fetchAllVehicleTypes();
-      fetchPriceData();
       fetchPromotionData();
     }, 15000);
 
@@ -263,10 +274,42 @@ export default function HomeScreen() {
       <ThemedView style={styles.titleContainer}>
         <View style={styles.service}>
           <TabBarIcon name="pricetags" color="#FFA500" size={24} style={styles.iconSpacing} />
-          <ThemedText type="subtitle" style={styles.titleText}>Giá tham khảo</ThemedText>
+          <ThemedText type="subtitle" style={styles.titleText}>Bảng giá hiện hành</ThemedText>
         </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.priceScroll}>
-          {priceData && priceData.map((price) => (
+      </ThemedView>
+      <ThemedView style={styles.filterContainer}>
+        <ThemedText type="subtitle">Loại xe:</ThemedText>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={vehicleTypeFilter}
+            onValueChange={(value) => setVehicleTypeFilter(value)}
+            style={styles.picker}
+          >
+            <Picker.Item label="All" value="" />
+            {[...new Set(priceData.map(item => item.vehicle_type))].map(type => (
+              <Picker.Item key={type} label={type} value={type} />
+            ))}
+          </Picker>
+        </View>
+
+        <ThemedText type="subtitle">Tên dịch vụ:</ThemedText>
+        <View style={styles.pickerContainer}>
+          <Picker
+            selectedValue={serviceFilter}
+            onValueChange={(value) => setServiceFilter(value)}
+            style={styles.picker}
+          >
+            <Picker.Item label="All" value="" />
+            {[...new Set(priceData.map(item => item.service))].map(service => (
+              <Picker.Item key={service} label={service} value={service} />
+            ))}
+          </Picker>
+        </View>
+      </ThemedView>
+      
+      <ThemedView style={styles.priceContainer}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {filteredData.map(price => (
             <View key={price.priceline_id} style={styles.priceCard}>
               <Text style={styles.serviceName}>Dịch vụ: {price.service}</Text>
               <Text style={styles.vehicleType}>Loại xe: {price.vehicle_type}</Text>
@@ -276,7 +319,7 @@ export default function HomeScreen() {
           ))}
         </ScrollView>
       </ThemedView>
-      <Button onPress={getToken}>Get token</Button>
+      {/* <Button onPress={getToken}>Get token</Button> */}
     </ParallaxScrollView>
   );
 }
@@ -427,6 +470,8 @@ const styles = StyleSheet.create({
     marginRight: 10,
     width: 200,
     alignItems: 'center',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
   },
   promotionDescription: {
     fontSize: 14,
@@ -444,5 +489,30 @@ const styles = StyleSheet.create({
   remainingDaysText: {
     fontSize: 12,
     color: '#fff',
+
   },
+  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  filterContainer: {
+    padding: 10,
+    alignItems: 'center', // Center-align content horizontally
+    width: '100%',
+  },
+  pickerContainer: {
+    width: '90%', // Adjust width for alignment within the filter container
+    marginVertical: 5,
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderColor: '#ccc',
+    borderWidth: 1,
+  },
+  picker: {
+    height: 50,
+    width: '100%', // Set width to fill the container
+    bottom: 82, // Align picker to the bottom of the container
+  },
+  priceCard: { padding: 10, marginHorizontal: 5, backgroundColor: '#f9f9f9', borderRadius: 8, width: 200 },
+  serviceName: { fontWeight: 'bold' },
+  vehicleType: { color: '#333' },
+  priceAmount: { color: '#888' },
+  serviceTime: { color: '#888' },
 });

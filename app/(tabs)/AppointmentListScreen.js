@@ -176,6 +176,11 @@ export default function AppointmentScreen() {
     fetchCustomerData();
     fetchAppointments();
     fetchWaitingAppointments();
+    const intervalId = setInterval(() => {
+      fetchAppointments();
+      fetchWaitingAppointments();
+    }, 5000);
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -238,7 +243,7 @@ export default function AppointmentScreen() {
   
     return (
       <View style={styles.appointmentCard}>
-        <Text style={styles.title}>Mã vé/Code: {item._id}</Text>
+        <Text style={styles.title}>Mã lịch hẹn/Code: {item._id}</Text>
         <Text style={styles.status}>{item.slot_id == null && item.status === 'waiting' ? 'Chờ xe' : 'Đang thực hiện'}</Text>
         <Text style={styles.infoLabel}>Thông tin xe:</Text>
         <Text style={styles.info}>- {item.vehicle_id.manufacturer} {item.vehicle_id.model} ({item.vehicle_id.license_plate})</Text>
@@ -260,8 +265,8 @@ export default function AppointmentScreen() {
   const renderAppointment = ({ item }) => (
 
     <View style={styles.appointmentCard}>
-      <Text style={styles.title}>Mã vé/Code: {item._id}</Text>
-      {/* <Text style={styles.status}> { item.status === 'waiting' ? 'Đang xử lý' : 'Hoàn thành' }</Text> */}
+      <Text style={styles.title}>Mã lịch hẹn/Code: {item._id}</Text>
+      <Text style={styles.status}> { item.status === 'waiting' ? 'Đang xử lý' : item.status === 'completed' ? 'Hoàn thành' : item.status === 'completed' ? 'Đã hủy' :'Đã trả' }</Text>
       <Text style={styles.infoLabel}>Thông tin xe:</Text>
       <Text style={styles.info}>- {item.vehicle_id.manufacturer} {item.vehicle_id.model} ({item.vehicle_id.license_plate})</Text>
       <Text style={styles.info}>Ngày giờ hẹn: {new Date(item.appointment_datetime).toLocaleString()}</Text>
@@ -280,6 +285,7 @@ export default function AppointmentScreen() {
         <TouchableOpacity onPress={() => handleGenerateInvoice(item._id)} style={styles.actionButton}>
           <Text style={styles.actionButtonText}>Tạo thanh toán</Text>
         </TouchableOpacity>
+        
       )}
       
       {item.invoice && item.invoice.status !== 'paid' && (
@@ -330,7 +336,7 @@ export default function AppointmentScreen() {
 
                 <Text style={styles.sectionTitle}>Khuyến mãi:</Text>
                 {invoiceDetails.promotion_header_ids.map(promo => (
-                  <Text key={promo._id} style={styles.modalText}>- {promo.description} ({promo.discount_type === 2 ? 'Trực tiếp' : 'Phần trăm'}): {promo.details[0].discount_value} VND</Text>
+                  <Text key={promo._id} style={styles.modalText}>- {promo.description} ({promo.discount_type === 2 ? 'Trực tiếp' : 'Phần trăm'}): {promo.details[0].discount_value}{promo.discount_type === 2 ? 'VND' : '%'}</Text>
                 ))}
 
                 <Text style={styles.modalText}>Tổng tiền: {invoiceDetails.total_amount} VND</Text>
