@@ -171,11 +171,11 @@ export default function CustomerProfile() {
   // xác nhận xóa xe
   const confirmDeleteVehicle = (vehicleId) => {
     Alert.alert(
-      'Confirm Deletion',
-      'Are you sure you want to delete this vehicle?',
+      'Xác nhận xóa',
+      'Bạn có muốn xóa thông tin xe này?',
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteVehicle(vehicleId) },
+        { text: 'Hủy', style: 'cancel' },
+        { text: 'Xóa', style: 'destructive', onPress: () => deleteVehicle(vehicleId) },
       ]
     );
   };

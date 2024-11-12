@@ -285,9 +285,9 @@ export default function HomeScreen() {
             onValueChange={(value) => setVehicleTypeFilter(value)}
             style={styles.picker}
           >
-            <Picker.Item label="All" value="" />
+            <Picker.Item label="All" value=""  color='green'/>
             {[...new Set(priceData.map(item => item.vehicle_type))].map(type => (
-              <Picker.Item key={type} label={type} value={type} />
+              <Picker.Item key={type} label={type} value={type} color='green' />
             ))}
           </Picker>
         </View>
@@ -299,9 +299,9 @@ export default function HomeScreen() {
             onValueChange={(value) => setServiceFilter(value)}
             style={styles.picker}
           >
-            <Picker.Item label="All" value="" />
+            <Picker.Item label="All" value="" color='red'/>
             {[...new Set(priceData.map(item => item.service))].map(service => (
-              <Picker.Item key={service} label={service} value={service} />
+              <Picker.Item key={service} label={service} value={service} color='red' />
             ))}
           </Picker>
         </View>
