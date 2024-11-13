@@ -113,11 +113,11 @@ export default function CustomerProfile() {
 
   useEffect(() => {
     fetchCustomerData();
-    const intervalId = setInterval(() => {
-      fetchCustomerData();
-    }, 15000);
-    // Dọn dẹp interval khi component bị hủy
-    return () => clearInterval(intervalId);
+    // const intervalId = setInterval(() => {
+    //   fetchCustomerData();
+    // }, 15000);
+    // // Dọn dẹp interval khi component bị hủy
+    // return () => clearInterval(intervalId);
   }, []);
   // cập nhật thông tin khách hàng
   const handleUpdateCustomer = async () => {
