@@ -3,7 +3,16 @@ import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOp
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SegmentedButtons } from 'react-native-paper';
 import moment from 'moment';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
 
+// Configure Reanimated logger
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Reanimated runs in strict mode by default
+});
 export default function AppointmentScreen() {
   const [customerData, setCustomerData] = useState(null);
   const [appointments, setAppointments] = useState([]); // All appointments

@@ -6,7 +6,16 @@ import { ThemedText } from '@/components/ThemedText';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { Button } from 'react-native-paper';
 import { MaterialIcons } from '@expo/vector-icons';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
 
+// Configure Reanimated logger
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Reanimated runs in strict mode by default
+});
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState('');

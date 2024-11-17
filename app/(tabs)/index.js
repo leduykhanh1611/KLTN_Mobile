@@ -9,7 +9,16 @@ import { Button } from 'react-native-paper';
 import { useEffect, useState } from 'react';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { Picker } from '@react-native-picker/picker';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
 
+// Configure Reanimated logger
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Reanimated runs in strict mode by default
+});
 export default function HomeScreen() {
   const [customerData, setCustomerData] = useState(null);
   const [serviceData, setServiceData] = useState(null);

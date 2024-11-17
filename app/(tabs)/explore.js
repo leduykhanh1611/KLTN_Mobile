@@ -1,12 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Modal, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Modal, Alert, TouchableWithoutFeedback } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
 
+// Configure Reanimated logger
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Reanimated runs in strict mode by default
+});
 export default function TabTwoScreen() {
   const [loading, setLoading] = useState(false);
   const [vehicleModalVisible, setVehicleModalVisible] = useState(false);
@@ -256,7 +265,7 @@ export default function TabTwoScreen() {
           onPress={confirmAppointment}
           disabled={!(selectedVehicle && selectedServices.length > 0 && selectedDateTime)}
         >
-          <Text style={styles.confirmButtonText}>CHỐT GIỜ CHĂM SÓC</Text>
+          <Text style={styles.confirmButtonText}>XÁC NHẬN LỊCH HẸN</Text>
         </TouchableOpacity>
         {loading && <ActivityIndicator size="large" color="#4CAF50" style={styles.loadingOverlay} />}
         <Text style={styles.footerText}>Chăm sóc xong trả tiền, hủy lịch không sao</Text>
@@ -267,6 +276,8 @@ export default function TabTwoScreen() {
 
       {/* Vehicle Selection Modal */}
       <Modal visible={vehicleModalVisible} animationType="slide" transparent={true}>
+
+      <TouchableWithoutFeedback onPress={() => setVehicleModalVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Chọn xe của bạn</Text>
@@ -286,10 +297,12 @@ export default function TabTwoScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Service Selection Modal */}
       <Modal visible={serviceModalVisible} animationType="slide" transparent={true}>
+      <TouchableWithoutFeedback onPress={() => setServiceModalVisible(false)}>
         <View style={styles.modalContainer}>
           <View style={styles.modalContent}>
             <Text style={styles.modalTitle}>Chọn dịch vụ</Text>
@@ -319,6 +332,7 @@ export default function TabTwoScreen() {
             </TouchableOpacity>
           </View>
         </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
     </ParallaxScrollView>

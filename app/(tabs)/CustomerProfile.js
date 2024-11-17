@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, TextInput, ActivityIndicator, StyleSheet, ScrollView, Alert, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
+import { View, Text, TextInput, ActivityIndicator, StyleSheet, ScrollView, Alert, TouchableOpacity, Modal, KeyboardAvoidingView, Platform, Dimensions, TouchableWithoutFeedback } from 'react-native';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Button } from 'react-native-paper';
@@ -8,7 +8,16 @@ import { TabBarIcon } from '@/components/navigation/TabBarIcon';
 import { ThemedView } from '@/components/ThemedView';
 import { Picker } from '@react-native-picker/picker';
 import { router } from 'expo-router';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
 
+// Configure Reanimated logger
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Reanimated runs in strict mode by default
+});
 export default function CustomerProfile() {
   const [customerData, setCustomerData] = useState(null);
   const [vehicleTypes, setVehicleTypes] = useState([]);
@@ -314,6 +323,7 @@ export default function CustomerProfile() {
       </Button>
       {/* Add or Update Vehicle Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
+      <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalContainer}
@@ -334,6 +344,7 @@ export default function CustomerProfile() {
               placeholderTextColor={'#666'}
               style={styles.input}
               onChangeText={(text) => setNewVehicle({ ...newVehicle, license_plate: text })}
+              editable={!isUpdating} // Không cho phép chỉnh sửa nếu là cập nhật
             />
             <TextInput
               placeholder="Hãng xe"
@@ -368,6 +379,7 @@ export default function CustomerProfile() {
             <Button onPress={() => setModalVisible(false)} style={styles.cancelButton}>Hủy</Button>
           </ScrollView>
         </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
 
     </ParallaxScrollView>

@@ -4,7 +4,16 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Button } from 'react-native-paper';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from 'react-native-reanimated';
 
+// Configure Reanimated logger
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.warn,
+  strict: false, // Reanimated runs in strict mode by default
+});
 export default function OtpVerificationScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams();
