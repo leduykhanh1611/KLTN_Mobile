@@ -139,47 +139,55 @@ export default function AppointmentScreen() {
 
   const renderTimeline = (slot, services) => {
     if (!slot) return null;
-  
+
     const startTime = moment(slot.slot_datetime);
     const currentTime = moment();
-    let stages = [{ label: 'Tiếp nhận', time: startTime }];
+    let stages = [{ label: 'Tiếp nhận', time: startTime, isDone: true }]; // Giai đoạn đầu tiên luôn là 'Done'
     let lastTime = startTime;
-  
+
     if (Array.isArray(services)) {
-      services.forEach((service) => {
-        const serviceName = service.name;
-        const timeRequired = Number(service.time_required);
-  
-        const serviceTime = lastTime.clone().add(timeRequired, 'minutes');
-        stages.push({ label: serviceName, time: serviceTime });
-        lastTime = serviceTime;
-      });
+        services.forEach((service) => {
+            const serviceName = service.name;
+            const timeRequired = Number(service.time_required);
+            let serviceTime;
+
+            if (service.is_done && service.time_completed) {
+                // Nếu dịch vụ đã hoàn thành, sử dụng time_completed
+                serviceTime = moment(service.time_completed);
+            } else {
+                // Nếu chưa hoàn thành, tính toán dựa trên thời gian trước đó
+                serviceTime = lastTime.clone().add(timeRequired, 'minutes');
+            }
+
+            stages.push({ label: serviceName, time: serviceTime, isDone: service.is_done });
+            lastTime = serviceTime; // Cập nhật lastTime cho dịch vụ tiếp theo
+        });
     }
-  
-    stages.push({ label: 'Hoàn thành', time: lastTime });
-  
+
+    stages.push({ label: 'Hoàn thành', time: lastTime, isDone: false });
+
     return (
-      <View style={styles.timelineContainer}>
-        {stages.map((stage, index) => (
-          <View key={index} style={styles.timelineStage}>
-            <Text style={[
-              styles.timelineText,
-              currentTime.isAfter(stage.time) && styles.timelineTextActive,
-            ]}>
-              {stage.label}: {stage.time.format('HH:mm')}
-            </Text>
-            {index < stages.length - 1 && (
-              <View style={[
-                styles.timelineLine,
-                currentTime.isAfter(stage.time) && styles.timelineLineActive,
-              ]} />
-            )}
-          </View>
-        ))}
-      </View>
+        <View style={styles.timelineContainer}>
+            {stages.map((stage, index) => (
+                <View key={index} style={styles.timelineStage}>
+                    <Text style={[
+                        styles.timelineText,
+                        (stage.isDone || currentTime.isAfter(stage.time)) && styles.timelineTextActive,
+                    ]}>
+                        {stage.label}: {stage.time.format('HH:mm')}
+                    </Text>
+                    {index < stages.length - 1 && (
+                        <View style={[
+                            styles.timelineLine,
+                            (stage.isDone || currentTime.isAfter(stage.time)) && styles.timelineLineActive,
+                        ]} />
+                    )}
+                </View>
+            ))}
+        </View>
     );
-  };
-  
+};
+
 
   const renderAppointment = ({ item }) => {
     // Determine the status label
