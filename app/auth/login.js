@@ -47,7 +47,7 @@ export default function LoginScreen() {
           await AsyncStorage.setItem('token', data.token);
           await AsyncStorage.setItem('id', data.user.id);
           // Điều hướng đến trang chính sau khi đăng nhập thành công
-          router.push('(tabs)');
+          router.replace('(tabs)');
         }
       } else {
         Alert.alert('Đăng nhập thất bại', data.msg);

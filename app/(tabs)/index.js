@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Platform, Alert, View, ActivityIndicator, Text, ScrollView } from 'react-native';
+import { ImageBackground, Image, StyleSheet, Platform, Alert, View, ActivityIndicator, Text, ScrollView, TouchableOpacity } from 'react-native';
 
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
@@ -13,6 +13,7 @@ import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
 } from 'react-native-reanimated';
+import { router } from 'expo-router';
 
 // Configure Reanimated logger
 configureReanimatedLogger({
@@ -38,6 +39,7 @@ export default function HomeScreen() {
     const timeDiff = end - currentDate;
     return Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Convert milliseconds to days
   };
+
   const getToken = async () => {
     try {
       const token = await AsyncStorage.getItem('token');
@@ -63,12 +65,6 @@ export default function HomeScreen() {
         },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error Response:', errorText);
-        Alert.alert('Lỗi', 'Không thể tải thông tin khách hàng');
-        return;
-      }
 
       const data = await response.json();
       await AsyncStorage.setItem('idCus', data.customer._id);
@@ -91,13 +87,6 @@ export default function HomeScreen() {
         },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error Response:', errorText);
-        Alert.alert('Lỗi', 'Không thể tải thông tin dịch vụ');
-        return;
-      }
-
       const data = await response.json();
       setServiceData(data);
     }
@@ -117,12 +106,6 @@ export default function HomeScreen() {
         },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error Response:', errorText);
-        Alert.alert('Lỗi', 'Không thể tải thông tin các loại xe');
-        return;
-      }
 
       const data = await response.json();
       setVehicleTypeData(data);
@@ -158,14 +141,9 @@ export default function HomeScreen() {
           Authorization: `Bearer ${token}`,
         },
       });
-
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Error Response:', errorText);
-        Alert.alert('Lỗi', 'Không thể tải thông tin khuyến mãi');
-        return;
+        throw new Error('Network response was not ok');
       }
-
       const data = await response.json();
       setPromotionData(data);
     } catch (error) {
@@ -207,6 +185,9 @@ export default function HomeScreen() {
     return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
   };
 
+  const handleAppointment = () => {
+    router.push('/(tabs)/explore');
+  };
 
   if (loading) {
     return (
@@ -215,22 +196,28 @@ export default function HomeScreen() {
       </View>
     );
   }
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
-        <View style={styles.headerContainer}>
-          <View style={[styles.profileImageContainer]}>
-            <TabBarIcon name="person" color="#fff" size={40} />
-          </View>
-          <View style={styles.name}>
-            <Text style={styles.nameText}>{customerData?.customer?.name || 'Loading...'}<HelloWave /></Text>
-            <Text style={styles.nameText}>Hạng: {customerData?.customer.customer_rank_id?.rank_name || 'Loading...'}</Text>
-            <Text style={styles.nameText}>Đã chi: {customerData.customer.total_spending} VND</Text>
+        <View style={styles.headerBackground}
+        
+        >
+          <View style={styles.headerOverlay}>
+            <View style={styles.profileImageContainer}>
+              <TabBarIcon name="person" color="#fff" size={40} />
+            </View>
+            <View style={styles.name}>
+              <Text style={styles.nameText}>{customerData?.customer?.name || 'Loading...'}</Text>
+              <Text style={styles.rankText}>Hạng: {customerData?.customer.customer_rank_id?.rank_name || 'Loading...'}</Text>
+              <Text style={styles.spendingText}>Đã chi: {formatPrice(customerData.customer.total_spending)}</Text>
+            </View>
           </View>
         </View>
       }>
-      {/* Promotions Section */}
+
+      {/* Phần Khuyến mãi */}
       <ThemedView style={styles.titleContainer}>
         <View style={styles.service}>
           <TabBarIcon name="gift" color="#FF6347" size={24} style={styles.iconSpacing} />
@@ -240,16 +227,27 @@ export default function HomeScreen() {
           {promotionData && promotionData.map((promotion) => {
             const remainingDays = calculateRemainingDays(promotion.end_date);
             return (
-              <View key={promotion._id} style={styles.promotionCard}>
-                <Text style={styles.promotionDescription}>{promotion.description}</Text>
-                <View style={styles.remainingDaysBadge}>
-                  <Text style={styles.remainingDaysText}>Còn {remainingDays} ngày </Text>
+              <TouchableOpacity key={promotion._id} style={styles.promotionCard}
+              onPress={() => handleAppointment()}
+              >
+                <Image
+                  source={require('@/assets/images/KM.jpg')}
+                  style={styles.promotionImage}
+                />
+
+                <View style={styles.promotionContent}>
+                  <Text style={styles.promotionDescription}>{promotion.description}</Text>
+                  <View style={styles.remainingDaysBadge}>
+                    <Text style={styles.remainingDaysText}>Còn {remainingDays} ngày</Text>
+                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </ScrollView>
       </ThemedView>
+
+      {/* Phần Dịch vụ */}
       <ThemedView style={styles.titleContainer}>
         <View style={styles.service}>
           <TabBarIcon name="briefcase" color="#4CAF50" size={24} style={styles.iconSpacing} />
@@ -257,15 +255,24 @@ export default function HomeScreen() {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.serviceScroll}>
           {serviceData && serviceData.map((service) => (
-            <View key={service._id} style={styles.serviceCard}>
-              <Text style={styles.serviceName}>{service.name}</Text>
-              <Text style={styles.serviceDescription}>{service.description}</Text>
-              <Text style={styles.serviceTime}>Thời gian: {service.time_required} phút</Text>
-            </View>
+            <TouchableOpacity key={service._id} style={styles.serviceCard}
+            onPress={() => handleAppointment()}
+            >
+              <Image
+                source={{ uri: service.image_url }}
+                style={styles.serviceImage}
+              />
+              <View style={styles.serviceContent}>
+                <Text style={styles.serviceName}>{service.name}</Text>
+                <Text style={styles.serviceDescription}>{service.description}</Text>
+                <Text style={styles.serviceTime}>Thời gian: {service.time_required} phút</Text>
+              </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </ThemedView>
 
+      {/* Phần Loại Xe */}
       <ThemedView style={styles.titleContainer}>
         <View style={styles.service}>
           <TabBarIcon name="car" color="#2196F3" size={24} style={styles.iconSpacing} />
@@ -274,213 +281,138 @@ export default function HomeScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.vehicleScroll}>
           {vehicleTypeData && vehicleTypeData.map((vehicle) => (
             <View key={vehicle._id} style={styles.vehicleCard}>
-              <Text style={styles.vehicleName}>{vehicle.vehicle_type_name}</Text>
-              <Text style={styles.vehicleDescription}>{vehicle.description}</Text>
+              <Image
+                source={{ uri: vehicle.image_url }}
+                style={styles.vehicleImage}
+              />
+              <View style={styles.vehicleContent}>
+                <Text style={styles.vehicleName}>{vehicle.vehicle_type_name}</Text>
+                <Text style={styles.vehicleDescription}>{vehicle.description}</Text>
+              </View>
             </View>
           ))}
         </ScrollView>
       </ThemedView>
+
+      {/* Phần Bảng giá */}
       <ThemedView style={styles.titleContainer}>
         <View style={styles.service}>
           <TabBarIcon name="pricetags" color="#FFA500" size={24} style={styles.iconSpacing} />
           <ThemedText type="subtitle" style={styles.titleText}>Bảng giá hiện hành</ThemedText>
         </View>
       </ThemedView>
+
+      {/* Bộ lọc */}
       <ThemedView style={styles.filterContainer}>
-        <ThemedText type="subtitle">Loại xe:</ThemedText>
-        <View style={styles.pickerContainer}>
+        <View style={styles.filterRow}>
+          <TabBarIcon name="car" color="#2196F3" size={24} style={styles.filterIcon} />
           <Picker
             selectedValue={vehicleTypeFilter}
             onValueChange={(value) => setVehicleTypeFilter(value)}
             style={styles.picker}
+            dropdownIconColor="#2196F3"
           >
-            <Picker.Item label="All" value=""  color='green'/>
+            <Picker.Item label="Tất cả loại xe" value="" color='#2196F3' />
             {[...new Set(priceData.map(item => item.vehicle_type))].map(type => (
-              <Picker.Item key={type} label={type} value={type} color='green' />
+              <Picker.Item key={type} label={type} value={type} color='#2196F3' />
             ))}
           </Picker>
         </View>
 
-        <ThemedText type="subtitle">Tên dịch vụ:</ThemedText>
-        <View style={styles.pickerContainer}>
+        <View style={styles.filterRow}>
+          <TabBarIcon name="pricetag" color="#FFA500" size={24} style={styles.filterIcon} />
           <Picker
             selectedValue={serviceFilter}
             onValueChange={(value) => setServiceFilter(value)}
             style={styles.picker}
+            dropdownIconColor="#FFA500"
           >
-            <Picker.Item label="All" value="" color='red'/>
+            <Picker.Item label="Tất cả dịch vụ" value="" color='#FFA500' />
             {[...new Set(priceData.map(item => item.service))].map(service => (
-              <Picker.Item key={service} label={service} value={service} color='red' />
+              <Picker.Item key={service} label={service} value={service} color='#FFA500' />
             ))}
           </Picker>
         </View>
       </ThemedView>
-      
+
+      {/* Danh sách giá */}
       <ThemedView style={styles.priceContainer}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {filteredData.map(price => (
-            <View key={price.priceline_id} style={styles.priceCard}>
+            <TouchableOpacity key={price.priceline_id} style={styles.priceCard}
+            onPress={() => handleAppointment()}
+            >
               <Text style={styles.serviceName}>Dịch vụ: {price.service}</Text>
               <Text style={styles.vehicleType}>Loại xe: {price.vehicle_type}</Text>
-              <Text style={styles.priceAmount}>Giá: {formatPrice(price.price)} VND</Text>
+              <Text style={styles.priceAmount}>Giá: {formatPrice(price.price)}</Text>
               <Text style={styles.serviceTime}>Thời gian: {price.time_required} phút</Text>
-            </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
       </ThemedView>
-      {/* <Button onPress={getToken}>Get token</Button> */}
+
     </ParallaxScrollView>
   );
 }
 
+// Styles
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'column',
-    // alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+  // Styles cho Header
+  headerBackground: {
+    width: '100%',
+    height: 220,
+    justifyContent: 'flex-end',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 50,
-    position: 'absolute',
-  },
-  centered: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerContainer: {
-    alignItems: 'center',
+  headerOverlay: {
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     flexDirection: 'row',
-    top: 60,
-    padding: 10,
+    alignItems: 'center',
+    padding: 30,
   },
   profileImageContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    // backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    marginBottom: 10,
-  },
-  nameText: {
-    fontSize: 18,
-    color: '#fff',
-    fontWeight: 'bold',
-    textAlign: 'left', // Center the text
-    margin: 8,
+    marginRight: 10,
   },
   name: {
-    marginLeft: 10,
     flexDirection: 'column',
     justifyContent: 'flex-start',
   },
-  serviceScroll: {
-    paddingVertical: 20,
-    paddingHorizontal: 5,
+  nameText: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: 'bold',
   },
-  serviceCard: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 15,
-    marginRight: 10,
-    width: 200,
-  },
-  serviceName: {
+  rankText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    color: '#ddd',
   },
-  serviceDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  serviceTime: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 10,
-  },
-  vehicleScroll: {
-    paddingVertical: 20,
-    paddingHorizontal: 5,
-  },
-  vehicleCard: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 15,
-    marginRight: 10,
-    width: 200,
-  },
-  vehicleName: {
+  spendingText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#333',
+    color: '#ddd',
   },
-  vehicleDescription: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 5,
-  },
-  service: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 0,
-  },
-  titleWithIcon: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 10, // Optional: for spacing above and below the section title
-  },
-  iconSpacing: {
-    marginRight: 8, // Adjust spacing as needed
-  },
-  titleText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  priceScroll: {
-    paddingVertical: 20,
-    paddingHorizontal: 5,
-  },
-  priceCard: {
-    backgroundColor: '#f9f9f9',
-    borderRadius: 8,
-    padding: 15,
-    marginRight: 10,
-    width: 200,
-  },
-  vehicleType: {
-    fontSize: 14,
-    color: '#333',
-    marginTop: 5,
-  },
-  priceAmount: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 5,
-  },
+  // Styles cho Khuyến mãi
   promotionScroll: {
     paddingVertical: 20,
     paddingHorizontal: 5,
   },
   promotionCard: {
-    backgroundColor: '#e0f7fa',
+    backgroundColor: '#fff',
     borderRadius: 8,
-    padding: 15,
     marginRight: 10,
-    width: 200,
-    alignItems: 'center',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
+    width: 250,
+    overflow: 'hidden',
+  },
+  promotionImage: {
+    width: '100%',
+    height: 120,
+  },
+  promotionContent: {
+    padding: 10,
   },
   promotionDescription: {
     fontSize: 14,
@@ -493,35 +425,141 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
-    marginTop: 8,
+    alignSelf: 'center',
   },
   remainingDaysText: {
     fontSize: 12,
     color: '#fff',
-
   },
-  centered: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  // Styles cho Dịch vụ
+  serviceScroll: {
+    paddingVertical: 20,
+    paddingHorizontal: 5,
+  },
+  serviceCard: {
+    backgroundColor: '#1f1f1f',
+    borderRadius: 8,
+    marginRight: 10,
+    width: 200,
+    overflow: 'hidden',
+  },
+  serviceImage: {
+    width: '100%',
+    height: 100,
+  },
+  serviceContent: {
+    padding: 10,
+  },
+  serviceName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  serviceDescription: {
+    fontSize: 14,
+    color: '#ccc',
+    marginTop: 5,
+  },
+  serviceTime: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 10,
+  },
+  // Styles cho Loại xe
+  vehicleScroll: {
+    paddingVertical: 20,
+    paddingHorizontal: 5,
+  },
+  vehicleCard: {
+    backgroundColor: '#1f1f1f',
+    borderRadius: 8,
+    marginRight: 10,
+    width: 200,
+    overflow: 'hidden',
+  },
+  vehicleImage: {
+    width: '100%',
+    height: 100,
+  },
+  vehicleContent: {
+    padding: 10,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  vehicleDescription: {
+    fontSize: 14,
+    color: '#ccc',
+    marginTop: 5,
+  },
+  // Styles cho Bộ lọc
   filterContainer: {
     padding: 10,
-    alignItems: 'center', // Center-align content horizontally
+    alignItems: 'center',
     width: '100%',
   },
-  pickerContainer: {
-    width: '90%', // Adjust width for alignment within the filter container
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginVertical: 5,
-    borderRadius: 8,
-    overflow: 'hidden',
-    borderColor: '#ccc',
-    borderWidth: 1,
+    width: '90%',
+  },
+  filterIcon: {
+    marginRight: 10,
   },
   picker: {
-    height: 50,
-    width: '100%', // Set width to fill the container
-    bottom: 82, // Align picker to the bottom of the container
+    flex: 1,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
   },
-  priceCard: { padding: 10, marginHorizontal: 5, backgroundColor: '#f9f9f9', borderRadius: 8, width: 200 },
-  serviceName: { fontWeight: 'bold' },
-  vehicleType: { color: '#333' },
-  priceAmount: { color: '#888' },
-  serviceTime: { color: '#888' },
+  // Styles cho Bảng giá
+  priceContainer: {
+    paddingVertical: 10,
+  },
+  priceCard: {
+    backgroundColor: '#1f1f1f',
+    borderRadius: 8,
+    padding: 15,
+    marginRight: 10,
+    width: 200,
+  },
+  vehicleType: {
+    fontSize: 14,
+    color: '#fff',
+    marginTop: 5,
+  },
+  priceAmount: {
+    fontSize: 14,
+    color: '#888',
+    marginTop: 5,
+  },
+  // Các styles khác
+  titleContainer: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  service: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 0,
+  },
+  iconSpacing: {
+    marginRight: 8,
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerIcon: {
+    position: 'absolute',
+    top: '30%',
+    alignSelf: 'center',
+  },
 });

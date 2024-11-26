@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, Linking, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert, TouchableOpacity, Linking, Modal, ScrollView, Image } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SegmentedButtons } from 'react-native-paper';
 import moment from 'moment';
 import {
   configureReanimatedLogger,
@@ -13,13 +12,11 @@ configureReanimatedLogger({
   level: ReanimatedLogLevel.warn,
   strict: false, // Reanimated runs in strict mode by default
 });
+
 export default function AppointmentScreen() {
   const [customerData, setCustomerData] = useState(null);
   const [appointments, setAppointments] = useState([]); // All appointments
-  const [waitingAppointments, setWaitingAppointments] = useState([]); // Waiting appointments
-  const [filteredAppointments, setFilteredAppointments] = useState([]); // Filtered appointments based on view
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState('all');
   const [modalVisible, setModalVisible] = useState(false);
   const [invoiceDetails, setInvoiceDetails] = useState(null);
 
@@ -60,23 +57,6 @@ export default function AppointmentScreen() {
     }
   };
 
-  const fetchWaitingAppointments = async () => {
-    const idCus = await AsyncStorage.getItem('idCus');
-    const token = await AsyncStorage.getItem('token');
-    try {
-      const response = await fetch(`https://host-rose-sigma.vercel.app/api/appointments/mobile/appointment/customer/watting/${idCus}`, {
-        method: 'GET',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await response.json();
-      setWaitingAppointments(data);
-    } catch (error) {
-      Alert.alert('Lỗi', 'Lỗi lấy lịch hẹn đang xử lý');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const fetchInvoiceDetails = async (invoiceId) => {
     const token = await AsyncStorage.getItem('token');
     try {
@@ -86,6 +66,7 @@ export default function AppointmentScreen() {
       const result = await response.json();
       if (result.invoice) {
         setInvoiceDetails(result.invoice);
+        console.log(result.invoice);
         setModalVisible(true);
       } else {
         Alert.alert('Error', 'Unable to fetch invoice details');
@@ -132,14 +113,29 @@ export default function AppointmentScreen() {
     }
   };
 
-  const filterAppointments = (mode) => {
-    setViewMode(mode);
-    if (mode === 'waiting') {
-      setFilteredAppointments(waitingAppointments);
-    } else {
-      setFilteredAppointments(appointments);
-    }
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND',
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
+
+  const formatDate = (dateString) => {
+    return new Intl.DateTimeFormat('vi-VN', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(dateString));
+  };
+
+  useEffect(() => {
+    fetchCustomerData();
+    fetchAppointments();
+    const intervalId = setInterval(() => {
+      fetchAppointments();
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const renderTimeline = (slot, services) => {
     if (!slot) return null;
@@ -149,10 +145,13 @@ export default function AppointmentScreen() {
     let stages = [{ label: 'Tiếp nhận', time: startTime }];
     let lastTime = startTime;
   
-    if (Array.isArray(services)) { 
+    if (Array.isArray(services)) {
       services.forEach((service) => {
-        const serviceTime = lastTime.clone().add(service.time_required, 'minutes');
-        stages.push({ label: service.name, time: serviceTime });
+        const serviceName = service.name;
+        const timeRequired = Number(service.time_required);
+  
+        const serviceTime = lastTime.clone().add(timeRequired, 'minutes');
+        stages.push({ label: serviceName, time: serviceTime });
         lastTime = serviceTime;
       });
     }
@@ -180,25 +179,57 @@ export default function AppointmentScreen() {
       </View>
     );
   };
+  
 
-  useEffect(() => {
-    fetchCustomerData();
-    fetchAppointments();
-    fetchWaitingAppointments();
-    const intervalId = setInterval(() => {
-      fetchAppointments();
-      fetchWaitingAppointments();
-    }, 5000);
-    return () => clearInterval(intervalId);
-  }, []);
+  const renderAppointment = ({ item }) => {
+    // Determine the status label
+    let statusLabel = '';
+    switch(item.status) {
+      case 'waiting':
+        statusLabel = 'Đang xử lý';
+        break;
+      case 'completed':
+        statusLabel = 'Hoàn thành';
+        break;
+      case 'cancelled':
+        statusLabel = 'Đã hủy';
+        break;
+      default:
+        statusLabel = item.status;
+    }
 
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      fetchAppointments();
-      fetchWaitingAppointments();
-    }, 5000);
-    return () => clearInterval(intervalId);
-  }, []);
+    return (
+      <View style={styles.appointmentCard}>
+        <Text style={styles.title}>Mã lịch hẹn/Code: {item._id}</Text>
+        <Text style={styles.status}>{statusLabel}</Text>
+        <Text style={styles.infoLabel}>Thông tin xe:</Text>
+        <Text style={styles.info}>- {item.vehicle_id.manufacturer} {item.vehicle_id.model} ({item.vehicle_id.license_plate})</Text>
+        <Text style={styles.info}>Ngày giờ hẹn: {formatDate(item.appointment_datetime)}</Text>
+        <Text style={styles.info}>Trạng thái thanh toán: {item.invoice ? (item.invoice.status === 'paid' ? 'Hoàn thành' : item.invoice.status === 'back' ? 'Đã hoàn trả': 'Chờ thanh toán') : 'Chưa thanh toán'}</Text>
+
+        {/* Include the timeline for appointments that are in progress */}
+        {item.status === 'waiting' && item.slot_id && renderTimeline(item.slot_id, item.services)}
+
+        {item.invoice && (
+          <TouchableOpacity onPress={() => fetchInvoiceDetails(item.invoice._id)} style={styles.viewInvoiceButton}>
+            <Text style={styles.actionButtonText}>Xem chi tiết</Text>
+          </TouchableOpacity>
+        )}
+
+        {!item.invoice && (
+          <TouchableOpacity onPress={() => handleGenerateInvoice(item._id)} style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Tạo thanh toán</Text>
+          </TouchableOpacity>
+        )}
+
+        {item.invoice && (item.invoice.status === 'pending')&& (
+          <TouchableOpacity onPress={() => handleCreatePaymentLink(item.invoice._id)} style={styles.actionButton}>
+            <Text style={styles.actionButtonText}>Thanh toán</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -207,151 +238,108 @@ export default function AppointmentScreen() {
       </View>
     );
   }
-  const renderWaitingAppointment = ({ item }) => {
-    const renderTimeline = (slot, services) => {
-      if (!slot) return null;
-      
-      const startTime = moment(slot.slot_datetime);
-      const currentTime = moment();
-      let stages = [{ label: 'Tiếp nhận', time: startTime }];
-      let lastTime = startTime;
-  
-      if (Array.isArray(services)) {
-        services.forEach((service) => {
-          const serviceTime = lastTime.clone().add(service.time_required, 'minutes');
-          stages.push({ label: service.name, time: serviceTime });
-          lastTime = serviceTime;
-        });
-      }
-  
-      stages.push({ label: 'Hoàn thành', time: lastTime });
-  
-      return (
-        <View style={styles.timelineContainer}>
-          {stages.map((stage, index) => (
-            <View key={index} style={styles.timelineStage}>
-              <Text style={[
-                styles.timelineText,
-                currentTime.isAfter(stage.time) && styles.timelineTextActive,
-              ]}>
-                {stage.label}: {stage.time.format('HH:mm')}
-              </Text>
-              {index < stages.length - 1 && (
-                <View style={[
-                  styles.timelineLine,
-                  currentTime.isAfter(stage.time) && styles.timelineLineActive,
-                ]} />
-              )}
-            </View>
-          ))}
-          
-        </View>
-
-      );
-    };
-  
-    return (
-      <View style={styles.appointmentCard}>
-        <Text style={styles.title}>Mã lịch hẹn/Code: {item._id}</Text>
-        <Text style={styles.status}>{item.slot_id == null && item.status === 'waiting' ? 'Chờ xe' : 'Đang thực hiện'}</Text>
-        <Text style={styles.infoLabel}>Thông tin xe:</Text>
-        <Text style={styles.info}>- {item.vehicle_id.manufacturer} {item.vehicle_id.model} ({item.vehicle_id.license_plate})</Text>
-        <Text style={styles.info}>Ngày giờ hẹn: {new Date(item.appointment_datetime).toLocaleString()}</Text>
-        <Text style={styles.info}>Trạng thái hóa đơn: {item.invoice ? (item.invoice.status === 'paid' ? 'Hoàn thành' : 'Chờ thanh toán') : 'Chờ thanh toán'}</Text>
-  
-        {/* Render the timeline only if slot is not null */}
-        {item.slot_id && renderTimeline(item.slot_id, item.services)}
-  
-        {item.invoice && (
-          <TouchableOpacity onPress={() => fetchInvoiceDetails(item.invoice._id)} style={styles.viewInvoiceButton}>
-            <Text style={styles.actionButtonText}>Xem hóa đơn</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    );
-  };
-
-  const renderAppointment = ({ item }) => (
-
-    <View style={styles.appointmentCard}>
-      <Text style={styles.title}>Mã lịch hẹn/Code: {item._id}</Text>
-      <Text style={styles.status}> { item.status === 'waiting' ? 'Đang xử lý' : item.status === 'completed' ? 'Hoàn thành' : item.status === 'completed' ? 'Đã hủy' :'Đã trả' }</Text>
-      <Text style={styles.infoLabel}>Thông tin xe:</Text>
-      <Text style={styles.info}>- {item.vehicle_id.manufacturer} {item.vehicle_id.model} ({item.vehicle_id.license_plate})</Text>
-      <Text style={styles.info}>Ngày giờ hẹn: {new Date(item.appointment_datetime).toLocaleString()}</Text>
-      <Text style={styles.info}>Trạng thái thanh toán: {item.invoice ? (item.invoice.status === 'paid' ? 'Hoàn thành' : 'Chờ thanh toán') : 'Chờ thanh toán'}</Text>
-
-      {/* Only render the timeline in "Chờ Xe" view */}
-      {viewMode === 'waiting' && item.slot_id && renderTimeline(item.slot_id, item.services)}
-
-      {item.invoice && (
-        <TouchableOpacity onPress={() => fetchInvoiceDetails(item.invoice._id)} style={styles.viewInvoiceButton}>
-          <Text style={styles.actionButtonText}>Xem chi tiết</Text>
-        </TouchableOpacity>
-      )}
-
-      {!item.invoice && (
-        <TouchableOpacity onPress={() => handleGenerateInvoice(item._id)} style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Tạo thanh toán</Text>
-        </TouchableOpacity>
-        
-      )}
-      
-      {item.invoice && item.invoice.status !== 'paid' && (
-        <TouchableOpacity onPress={() => handleCreatePaymentLink(item.invoice._id)} style={styles.actionButton}>
-          <Text style={styles.actionButtonText}>Thanh toán</Text>
-        </TouchableOpacity>
-      )}
-    </View>
-  );
 
   return (
     <View style={styles.container}>
-      <SegmentedButtons
-        value={viewMode}
-        onValueChange={filterAppointments}
-        buttons={[
-          { value: 'all', label: 'Lịch Sử' },
-          { value: 'waiting', label: 'Đang xử lý' },
-        ]}
-        style={styles.segmentedButtons}
-      />
       <FlatList
-        data={filteredAppointments}
+        data={appointments}
         keyExtractor={(item) => item._id}
-        renderItem={viewMode === 'all' ? renderAppointment : renderWaitingAppointment}
+        renderItem={renderAppointment}
         contentContainerStyle={styles.listContainer}
         ListEmptyComponent={<Text style={styles.emptyText}>Không có dữ liệu</Text>}
       />
 
-      {/* Modal for Invoice Details */}
+      {/* Invoice Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
+        <View style={styles.invoiceModalContainer}>
+          <View style={styles.invoiceModalContent}>
             {invoiceDetails ? (
-              <ScrollView>
-                <Text style={styles.modalTitle}>CHI TIẾT</Text>
-                <Text style={styles.modalText}>Tên khách hàng: {invoiceDetails.customer_id.name}</Text>
-                <Text style={styles.modalText}>Email: {invoiceDetails.customer_id.email}</Text>
-                <Text style={styles.modalText}>Địa chỉ: {invoiceDetails.customer_id.address}</Text>
-                <Text style={styles.modalText}>Số điện thoại: {invoiceDetails.customer_id.phone_number}</Text>
-                <Text style={styles.modalText}>Nhân viên xử lý: {invoiceDetails.employee_id.name}</Text>
-                <Text style={styles.modalText}>Thời gian: {new Date(invoiceDetails.created_at).toLocaleString()}</Text>
+              <ScrollView contentContainerStyle={styles.invoiceContainer}>
+                {/* Invoice Header */}
+                <View style={styles.invoiceHeader}>
+                  <Image
+                    source={require('@/assets/images/logo.png')}
+                    style={styles.invoiceLogo}
+                  />
+                  <Text style={styles.invoiceTitle}>HÓA ĐƠN DỊCH VỤ</Text>
+                </View>
 
-                <Text style={styles.sectionTitle}>Chi tiết dịch vụ:</Text>
-                {invoiceDetails.details.map(detail => (
-                  <Text key={detail._id} style={styles.modalText}>- {detail.service_id.name}: {detail.price} VND x {detail.quantity}</Text>
-                ))}
+                {/* Customer and Invoice Details */}
+                <View style={styles.invoiceSection}>
+                  <Text style={styles.sectionTitle}>Thông Tin Khách Hàng</Text>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Tên:</Text>
+                    <Text style={styles.detailValue}>{invoiceDetails.customer_id.name}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Email:</Text>
+                    <Text style={styles.detailValue}>{invoiceDetails.customer_id.email}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Địa chỉ:</Text>
+                    <Text style={styles.detailValue}>{invoiceDetails.customer_id.address}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Số điện thoại:</Text>
+                    <Text style={styles.detailValue}>{invoiceDetails.customer_id.phone_number}</Text>
+                  </View>
+                  <View style={styles.detailRow}>
+                    <Text style={styles.detailLabel}>Thời gian:</Text>
+                    <Text style={styles.detailValue}>{formatDate(invoiceDetails.created_at)}</Text>
+                  </View>
+                </View>
 
-                <Text style={styles.sectionTitle}>Khuyến mãi:</Text>
-                {invoiceDetails.promotion_header_ids.map(promo => (
-                  <Text key={promo._id} style={styles.modalText}>- {promo.description} ({promo.discount_type === 2 ? 'Trực tiếp' : 'Phần trăm'}): {promo.details[0].discount_value}{promo.discount_type === 2 ? 'VND' : '%'}</Text>
-                ))}
+                {/* Services Details */}
+                <View style={styles.invoiceSection}>
+                  <Text style={styles.sectionTitle}>Chi Tiết Dịch Vụ</Text>
+                  {invoiceDetails.details.map(detail => (
+                    <View key={detail._id} style={styles.serviceRow}>
+                      <Text style={styles.serviceName}>{detail.service_id.name}</Text>
+                      <Text style={styles.serviceQuantity}>x{detail.quantity}</Text>
+                      <Text style={styles.servicePrice}>{formatCurrency(detail.price)}</Text>
+                    </View>
+                  ))}
+                </View>
 
-                <Text style={styles.modalText}>Tổng tiền: {invoiceDetails.total_amount} VND</Text>
-                <Text style={styles.modalText}>Giảm giá: {invoiceDetails.discount_amount} VND</Text>
-                <Text style={styles.modalText}>Thành tiền: {invoiceDetails.final_amount} VND</Text>
-                
+                {/* Khuyến Mãi */}
+                {invoiceDetails.promotion_header_ids.length > 0 && (
+                  <View style={styles.invoiceSection}>
+                    <Text style={styles.sectionTitle}>Khuyến Mãi</Text>
+                    {invoiceDetails.promotion_header_ids.map(promo => (
+                      <View key={promo._id} style={styles.promoRow}>
+                        <Text style={styles.promoDescription}>{promo.description}</Text>
+                        <Text style={styles.promoValue}>
+                          -{promo.discount_type === 2 ? formatCurrency(promo.details[0].discount_value) : `${promo.details[0].discount_value}%`}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
+
+                {/* Tổng tiền */}
+                <View style={styles.invoiceSection}>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Tổng tiền:</Text>
+                    <Text style={styles.totalValue}>{formatCurrency(invoiceDetails.total_amount)}</Text>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.totalLabel}>Giảm giá:</Text>
+                    <Text style={styles.totalValue}>-{formatCurrency(invoiceDetails.discount_amount)}</Text>
+                  </View>
+                  <View style={styles.totalRow}>
+                    <Text style={styles.finalTotalLabel}>Thành tiền:</Text>
+                    <Text style={styles.finalTotalValue}>{formatCurrency(invoiceDetails.final_amount)}</Text>
+                  </View>
+                </View>
+
+                {/* Payment Button */}
+                {invoiceDetails.status === 'pending' && (
+                  <TouchableOpacity onPress={() => handleCreatePaymentLink(invoiceDetails._id)} style={styles.payButton}>
+                    <Text style={styles.payButtonText}>Thanh toán</Text>
+                  </TouchableOpacity>
+                )}
+
+                {/* Close Button */}
                 <TouchableOpacity onPress={() => setModalVisible(false)} style={styles.closeButton}>
                   <Text style={styles.actionButtonText}>Đóng</Text>
                 </TouchableOpacity>
@@ -376,9 +364,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  segmentedButtons: {
-    marginBottom: 16,
   },
   listContainer: {
     paddingTop: 16,
@@ -430,41 +415,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#888',
   },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    padding: 20,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  modalText: {
-    fontSize: 14,
-    color: '#333',
-    marginBottom: 5,
-  },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginTop: 10,
-    marginBottom: 5,
-  },
-  closeButton: {
-    marginTop: 20,
-    backgroundColor: '#FF6347',
-    padding: 10,
-    borderRadius: 5,
-    alignItems: 'center',
-  },
   timelineContainer: {
     marginVertical: 10,
   },
@@ -489,5 +439,125 @@ const styles = StyleSheet.create({
   },
   timelineLineActive: {
     backgroundColor: '#4CAF50',
+  },
+  payButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 5,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  payButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  closeButton: {
+    backgroundColor: '#c2c2c2',
+    paddingVertical: 10,
+    borderRadius: 5,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  invoiceModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  invoiceModalContent: {
+    width: '90%',
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  invoiceContainer: {
+    padding: 20,
+  },
+  invoiceHeader: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  invoiceLogo: {
+    width: 100,
+    height: 100,
+    resizeMode: 'contain',
+  },
+  invoiceTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginTop: 10,
+  },
+  invoiceSection: {
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
+    paddingBottom: 5,
+    marginBottom: 10,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  detailLabel: {
+    width: 120,
+    fontWeight: 'bold',
+  },
+  detailValue: {
+    flex: 1,
+  },
+  serviceRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  serviceName: {
+    flex: 2,
+  },
+  serviceQuantity: {
+    flex: 1,
+    textAlign: 'center',
+  },
+  servicePrice: {
+    flex: 1,
+    textAlign: 'right',
+  },
+  promoRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  promoDescription: {
+    flex: 2,
+  },
+  promoValue: {
+    flex: 1,
+    textAlign: 'right',
+    color: 'green',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    marginBottom: 5,
+  },
+  totalLabel: {
+    flex: 1,
+    fontWeight: 'bold',
+  },
+  totalValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontWeight: 'bold',
+  },
+  finalTotalLabel: {
+    flex: 1,
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  finalTotalValue: {
+    flex: 1,
+    textAlign: 'right',
+    fontWeight: 'bold',
+    fontSize: 18,
   },
 });
