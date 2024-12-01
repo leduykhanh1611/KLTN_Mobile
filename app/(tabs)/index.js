@@ -30,7 +30,9 @@ export default function HomeScreen() {
   const [loading, setLoading] = useState(true);
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('');
   const [serviceFilter, setServiceFilter] = useState('');
-
+  const [appointments, setAppointments] = useState([]); // All appointments
+  const [processingCount, setProcessingCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
 
   // Function to calculate remaining days until end_date
   const calculateRemainingDays = (endDate) => {
@@ -160,6 +162,36 @@ export default function HomeScreen() {
       setFilteredData(filtered);
     }
   };
+  const fetchAppointments = async () => {
+    const idCus = await AsyncStorage.getItem('idCus');
+    const token = await AsyncStorage.getItem('token');
+
+    try {
+      const response = await fetch(`https://host-rose-sigma.vercel.app/api/appointments/mobile/appointment/customer/${idCus}`, {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch appointments');
+      }
+
+      const data = await response.json();
+
+      // Phân loại lịch hẹn
+      const processingAppointments = data.filter(app => app.status === 'processing');
+      const completedAppointments = data.filter(app => app.status === 'completed');
+
+      // Cập nhật trạng thái
+      setAppointments(data);
+      setProcessingCount(processingAppointments.length);
+      setCompletedCount(completedAppointments.length);
+    } catch (error) {
+      Alert.alert('Error', 'Failed to fetch appointments');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     filterData();
@@ -171,11 +203,13 @@ export default function HomeScreen() {
     fetchAllVehicleTypes();
     fetchPriceData();
     fetchPromotionData();
+    fetchAppointments();
     const intervalId = setInterval(() => {
       fetchCustomerData();
       fetchAllService();
       fetchAllVehicleTypes();
       fetchPromotionData();
+      fetchAppointments();
     }, 15000);
 
     // Dọn dẹp interval khi component bị hủy
@@ -201,21 +235,40 @@ export default function HomeScreen() {
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
       headerImage={
-        <View style={styles.headerBackground}
-        
-        >
+        <View style={styles.headerBackground}>
           <View style={styles.headerOverlay}>
-            <View style={styles.profileImageContainer}>
+            {/* <View style={styles.profileImageContainer}>
               <TabBarIcon name="person" color="#fff" size={40} />
+            </View> */}
+
+            {/* Thêm phần đếm số lịch hẹn */}
+            <View style={styles.counterRow}>
+              <View style={styles.counter}>
+                <Text style={styles.counterLabel}>Đang xử lý</Text>
+                <Text style={styles.counterValue}>{processingCount}</Text>
+              </View>
+              <View style={styles.counter}>
+                <Text style={styles.counterLabel}>Đã hoàn thành</Text>
+                <Text style={styles.counterValue}>{completedCount}</Text>
+              </View>
             </View>
+
+            {/* Phần thông tin khách hàng */}
             <View style={styles.name}>
-              <Text style={styles.nameText}>{customerData?.customer?.name || 'Loading...'}</Text>
-              <Text style={styles.rankText}>Hạng: {customerData?.customer.customer_rank_id?.rank_name || 'Loading...'}</Text>
-              <Text style={styles.spendingText}>Đã chi: {formatPrice(customerData.customer.total_spending)}</Text>
+              <Text style={styles.nameText}>
+                {customerData?.customer?.name || 'Loading...'}
+              </Text>
+              <Text style={styles.rankText}>
+                Hạng: {customerData?.customer.customer_rank_id?.rank_name || 'Loading...'}
+              </Text>
+              <Text style={styles.spendingText}>
+                Đã chi: {formatPrice(customerData.customer.total_spending)}
+              </Text>
             </View>
           </View>
         </View>
       }>
+
 
       {/* Phần Khuyến mãi */}
       <ThemedView style={styles.titleContainer}>
@@ -228,7 +281,7 @@ export default function HomeScreen() {
             const remainingDays = calculateRemainingDays(promotion.end_date);
             return (
               <TouchableOpacity key={promotion._id} style={styles.promotionCard}
-              onPress={() => handleAppointment()}
+                onPress={() => handleAppointment()}
               >
                 <Image
                   source={require('@/assets/images/KM.jpg')}
@@ -256,7 +309,7 @@ export default function HomeScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.serviceScroll}>
           {serviceData && serviceData.map((service) => (
             <TouchableOpacity key={service._id} style={styles.serviceCard}
-            onPress={() => handleAppointment()}
+              onPress={() => handleAppointment()}
             >
               <Image
                 source={{ uri: service.image_url }}
@@ -340,7 +393,7 @@ export default function HomeScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {filteredData.map(price => (
             <TouchableOpacity key={price.priceline_id} style={styles.priceCard}
-            onPress={() => handleAppointment()}
+              onPress={() => handleAppointment()}
             >
               <Text style={styles.serviceName}>Dịch vụ: {price.service}</Text>
               <Text style={styles.vehicleType}>Loại xe: {price.vehicle_type}</Text>
@@ -360,40 +413,81 @@ const styles = StyleSheet.create({
   // Styles cho Header
   headerBackground: {
     width: '100%',
-    height: 220,
+    height: 260,
     justifyContent: 'flex-end',
+    backgroundColor: '#1D3D47',
   },
   headerOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    flexDirection: 'row',
+    flexDirection: 'column',
     alignItems: 'center',
-    padding: 30,
+    paddingVertical: 65,
+    paddingHorizontal: 0,
   },
   profileImageContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    // backgroundColor: '#fff',
+    width: 80,
+    height: 100,
+    borderRadius: 40,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 10,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  counterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    marginBottom: 15,
+  },
+  counter: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  counterLabel: {
+    fontSize: 14,
+    color: '#fff',
+    marginBottom: 5,
+    fontWeight: '600',
+  },
+  counterValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
   },
   name: {
-    flexDirection: 'column',
-    justifyContent: 'flex-start',
+    alignItems: 'center',
   },
   nameText: {
-    fontSize: 20,
+    fontSize: 22,
     color: '#fff',
     fontWeight: 'bold',
+    textAlign: 'center',
   },
   rankText: {
     fontSize: 16,
-    color: '#ddd',
+    color: '#ccc',
+    textAlign: 'center',
+    marginVertical: 5,
   },
   spendingText: {
     fontSize: 16,
-    color: '#ddd',
+    color: '#ccc',
+    textAlign: 'center',
   },
   // Styles cho Khuyến mãi
   promotionScroll: {
