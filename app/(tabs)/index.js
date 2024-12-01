@@ -222,7 +222,9 @@ export default function HomeScreen() {
   const handleAppointment = () => {
     router.push('/(tabs)/explore');
   };
-
+  const handleHistory = () => {
+    router.push('/(tabs)/AppointmentListScreen');
+  };
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -243,14 +245,18 @@ export default function HomeScreen() {
 
             {/* Thêm phần đếm số lịch hẹn */}
             <View style={styles.counterRow}>
-              <View style={styles.counter}>
+              <TouchableOpacity
+                onPress={() => handleHistory()}
+                style={styles.counter}>
                 <Text style={styles.counterLabel}>Đang xử lý</Text>
                 <Text style={styles.counterValue}>{processingCount}</Text>
-              </View>
-              <View style={styles.counter}>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleHistory()}
+                style={styles.counter}>
                 <Text style={styles.counterLabel}>Đã hoàn thành</Text>
                 <Text style={styles.counterValue}>{completedCount}</Text>
-              </View>
+              </TouchableOpacity>
             </View>
 
             {/* Phần thông tin khách hàng */}
