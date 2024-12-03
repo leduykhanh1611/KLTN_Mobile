@@ -179,7 +179,7 @@ export default function HomeScreen() {
       const data = await response.json();
 
       // Phân loại lịch hẹn
-      const processingAppointments = data.filter(app => app.status === 'processing');
+      const processingAppointments = data.filter(app => app.status === 'waiting');
       const completedAppointments = data.filter(app => app.status === 'completed');
 
       // Cập nhật trạng thái
@@ -499,6 +499,7 @@ const styles = StyleSheet.create({
   promotionScroll: {
     paddingVertical: 20,
     paddingHorizontal: 5,
+    marginBottom: -50,
   },
   promotionCard: {
     backgroundColor: '#fff',
@@ -535,6 +536,7 @@ const styles = StyleSheet.create({
   serviceScroll: {
     paddingVertical: 20,
     paddingHorizontal: 5,
+    marginBottom: -35,
   },
   serviceCard: {
     backgroundColor: '#1f1f1f',
@@ -569,6 +571,7 @@ const styles = StyleSheet.create({
   vehicleScroll: {
     paddingVertical: 20,
     paddingHorizontal: 5,
+    marginBottom: -35,
   },
   vehicleCard: {
     backgroundColor: '#1f1f1f',
@@ -599,12 +602,15 @@ const styles = StyleSheet.create({
     padding: 10,
     alignItems: 'center',
     width: '100%',
+    marginBottom: -35,
+    marginTop: -20,
   },
   filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginVertical: 5,
     width: '90%',
+    
   },
   filterIcon: {
     marginRight: 10,
@@ -639,6 +645,7 @@ const styles = StyleSheet.create({
   titleContainer: {
     paddingHorizontal: 10,
     paddingVertical: 5,
+    width: '110%',
   },
   service: {
     flexDirection: 'row',
