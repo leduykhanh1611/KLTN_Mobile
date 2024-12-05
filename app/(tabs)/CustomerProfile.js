@@ -222,7 +222,9 @@ export default function CustomerProfile() {
     setIsUpdating(true);
     fetchVehicleTypes();
   };
-
+  const formatPrice = (price) => {
+    return price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  };
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -273,7 +275,7 @@ export default function CustomerProfile() {
             <ThemedText type="title" style={styles.infoText}>Điện thoại: {customerData.customer.phone_number}</ThemedText>
             <ThemedText type="title" style={styles.infoText}>Địa chỉ: {customerData.customer.address}</ThemedText>
             <ThemedText type="title" style={styles.infoText}>Email: {customerData.customer.email}</ThemedText>
-            <ThemedText type="title" style={styles.infoText}>Mức chi tiêu: {customerData.customer.total_spending}VND</ThemedText>
+            <ThemedText type="title" style={styles.infoText}>Mức chi tiêu: {formatPrice(customerData.customer.total_spending)}VND</ThemedText>
             <ThemedText type="title" style={styles.infoText}>Ngày tạo: {formatDate(customerData.customer.created_at)}</ThemedText>
             <Button mode="contained" onPress={() => setEditingCustomer(true)} style={styles.editButton}>
               Chỉnh sửa
@@ -323,11 +325,11 @@ export default function CustomerProfile() {
       </Button>
       {/* Add or Update Vehicle Modal */}
       <Modal visible={modalVisible} animationType="slide" transparent={true}>
-      <TouchableWithoutFeedback onPress={() => setModalVisible(false)}>
+      {/* {/* <TouchableWithoutFeedback onPress={() => setModalVisible(false)}> */}
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.modalContainer}
-        >
+        > 
           <ScrollView contentContainerStyle={styles.modalContent}>
             <ThemedText type="title" style={styles.modalTitle}>{isUpdating ? 'Cập nhật xe' : 'Thêm xe mới'}</ThemedText>
             <Picker
@@ -379,7 +381,7 @@ export default function CustomerProfile() {
             <Button onPress={() => setModalVisible(false)} style={styles.cancelButton}>Hủy</Button>
           </ScrollView>
         </KeyboardAvoidingView>
-        </TouchableWithoutFeedback>
+        {/* </TouchableWithoutFeedback> */}
       </Modal>
 
     </ParallaxScrollView>
@@ -414,7 +416,7 @@ const styles = StyleSheet.create({
   },
   infoText: {
     fontSize: 16,
-    color: '#A0A0A0',
+    color: '#fff',
     marginBottom: 10,
   },
   container: {
@@ -536,6 +538,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 8,
     width: '100%',
+    color: '#fff',
   },
   logout: {
     marginTop: 20,

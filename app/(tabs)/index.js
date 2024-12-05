@@ -66,8 +66,6 @@ export default function HomeScreen() {
           Authorization: `Bearer ${token}`,
         },
       });
-
-
       const data = await response.json();
       await AsyncStorage.setItem('idCus', data.customer._id);
       setCustomerData(data);
@@ -499,7 +497,7 @@ const styles = StyleSheet.create({
   promotionScroll: {
     paddingVertical: 20,
     paddingHorizontal: 5,
-    marginBottom: -50,
+    marginBottom: -35,
   },
   promotionCard: {
     backgroundColor: '#fff',
