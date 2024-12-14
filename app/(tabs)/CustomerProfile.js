@@ -50,7 +50,7 @@ export default function CustomerProfile() {
       });
       if (!response.ok) throw new Error('Lỗi lấy thông tin khách hàng');
       const data = await response.json();
-      await AsyncStorage.setItem('idCus', data.customer._id);
+      await AsyncStorage.setItem('idCus', data?.customer?._id);
       setCustomerData(data);
     } catch (error) {
       console.error(error);
@@ -351,7 +351,7 @@ export default function CustomerProfile() {
             <TextInput
               placeholder="Hãng xe"
               value={newVehicle.manufacturer}
-              placeholderTextColor={'#666'}
+              placeholderTextColor={'#333'}
               style={styles.input}
               onChangeText={(text) => setNewVehicle({ ...newVehicle, manufacturer: text })}
             />
@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     padding: 8,
     width: '100%',
-    color: '#fff',
+    color: '#666',
   },
   logout: {
     marginTop: 20,

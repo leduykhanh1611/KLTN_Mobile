@@ -67,7 +67,7 @@ export default function HomeScreen() {
         },
       });
       const data = await response.json();
-      await AsyncStorage.setItem('idCus', data.customer._id);
+      await AsyncStorage.setItem('idCus', data?.customer._id);
       setCustomerData(data);
     } catch (error) {
       console.error('Fetch Error:', error);
@@ -182,6 +182,11 @@ export default function HomeScreen() {
 
       // Cập nhật trạng thái
       setAppointments(data);
+      if (data.length === 0) {
+        setProcessingCount(0);
+        setCompletedCount(0);
+        return;
+      }
       setProcessingCount(processingAppointments.length);
       setCompletedCount(completedAppointments.length);
     } catch (error) {

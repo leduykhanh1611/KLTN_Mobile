@@ -44,7 +44,7 @@ export default function TabTwoScreen() {
       });
       if (!response.ok) throw new Error('Lỗi lấy thông tin khách hàng');
       const data = await response.json();
-      await AsyncStorage.setItem('idCus', data.customer._id);
+      await AsyncStorage.setItem('idCus', data?.customer?._id);
       setCustomerData(data);
     } catch (error) {
       console.error(error);

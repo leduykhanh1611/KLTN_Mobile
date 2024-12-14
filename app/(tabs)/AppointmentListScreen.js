@@ -30,7 +30,7 @@ export default function AppointmentScreen() {
       });
       if (!response.ok) throw new Error('Failed to fetch customer data');
       const data = await response.json();
-      await AsyncStorage.setItem('idCus', data.customer._id);
+      await AsyncStorage.setItem('idCus', data?.customer?._id);
       setCustomerData(data);
     } catch (error) {
       console.error(error);
